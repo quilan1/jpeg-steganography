@@ -1,22 +1,14 @@
 use anyhow::Result;
 
-use crate::{
-    jpeg::{
-        Component, DhtData, DqtData, HuffmanTableData, QuantizationTable, ScanComponentData,
-        SofData, SosData,
-    },
-    ProcessSection, Section,
-};
+use crate::jpeg::{segments::*, Jpeg, Marker::*, ProcessSegment, Segment};
 
 pub struct DebugProcessor;
 
-impl ProcessSection for DebugProcessor {
+impl ProcessSegment for DebugProcessor {
     type Output = ();
 
-    fn process_section(&mut self, section: &Section) -> Result<Self::Output> {
-        use crate::Marker::*;
-
-        let Section {
+    fn process_segment(&mut self, _: &mut Jpeg, section: &Segment) -> Result<Self::Output> {
+        let Segment {
             index,
             marker,
             data,

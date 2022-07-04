@@ -65,3 +65,18 @@ where
     bits.reverse();
     bits
 }
+
+#[allow(dead_code)]
+pub fn print_huffman_table(table: &Vec<(u8, Vec<u8>)>) {
+    for (value, bits) in table {
+        println!(
+            "\t{value}\t{}",
+            bits.into_iter()
+                .map(|v| v.to_string())
+                .collect::<Vec<_>>()
+                .join("")
+        );
+    }
+}
+
+/////////////////////////////////////////
