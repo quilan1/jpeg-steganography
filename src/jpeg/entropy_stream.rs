@@ -1,11 +1,12 @@
+/*
+ * Some sections of this code were pulled from the Rust jpeg-decoder library.
+ */
+
 use anyhow::Result;
 
-use crate::{
-    rw_stream::{HuffmanRWTree, RWStream},
-    Jpeg,
-};
+use crate::rw_stream::{HuffmanRWTree, RWStream};
 
-use super::segments::Component;
+use super::{segments::Component, Jpeg};
 
 struct ComponentInfo<'a> {
     component: &'a Component,
@@ -21,7 +22,7 @@ pub fn process_entropy_stream(jpeg: &Jpeg, in_data: &Vec<u8>) -> Result<Vec<u8>>
     let mut eob_run = 0;
     let mut mcus_left_until_restart = jpeg.restart_interval;
 
-    let in_data = remove_data_padding(in_data);
+    let in_data = strip_stream_padding(in_data);
     let mut out_data = Vec::with_capacity(in_data.len());
     let mut marker_positions = Vec::new();
     let mut read_writer = RWStream::new(&in_data, &mut out_data);
@@ -67,7 +68,7 @@ pub fn process_entropy_stream(jpeg: &Jpeg, in_data: &Vec<u8>) -> Result<Vec<u8>>
         }
     }
 
-    let out_data = add_data_padding(&mut out_data, &marker_positions);
+    let out_data = insert_data_padding(&mut out_data, &marker_positions);
     Ok(out_data)
 }
 
@@ -126,7 +127,7 @@ fn decode_block<'a>(read_writer: &mut RWStream<'a>, jpeg: &Jpeg, eob_run: &mut u
     Ok(())
 }
 
-fn remove_data_padding(in_data: &Vec<u8>) -> Vec<u8> {
+fn strip_stream_padding(in_data: &Vec<u8>) -> Vec<u8> {
     let mut fixed_data = Vec::with_capacity(in_data.len());
     let mut data_iter = in_data.iter().cloned();
     while let Some(value) = data_iter.next() {
@@ -141,7 +142,7 @@ fn remove_data_padding(in_data: &Vec<u8>) -> Vec<u8> {
     fixed_data
 }
 
-fn add_data_padding(data: &mut Vec<u8>, marker_positions: &Vec<usize>) -> Vec<u8> {
+fn insert_data_padding(data: &mut Vec<u8>, marker_positions: &Vec<usize>) -> Vec<u8> {
     let mut out_data = Vec::new();
     for (index, value) in data.drain(..).enumerate() {
         out_data.push(value);
@@ -165,8 +166,8 @@ fn get_components_info(jpeg: &Jpeg) -> Vec<ComponentInfo> {
             .unwrap();
 
         let component = &jpeg.frame.components[component_index];
-        let dc_table = jpeg.huffman_table(0, scan_component.dc_table_index);
-        let ac_table = jpeg.huffman_table(1, scan_component.ac_table_index);
+        let (dc_table, ac_table) =
+            jpeg.get_huffman_trees(scan_component.dc_table_index, scan_component.ac_table_index);
 
         components.push(ComponentInfo {
             component,

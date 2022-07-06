@@ -1,5 +1,7 @@
 mod debug;
-mod dht;
+mod dht_reader;
+mod dht_writer;
 
-pub use debug::DebugProcessor;
-pub use dht::{DhtProcessorReader, DhtProcessorWriter};
+pub use debug::DebugReader;
+pub use dht_reader::DhtReader;
+pub use dht_writer::DhtWriter;

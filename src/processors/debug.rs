@@ -2,17 +2,29 @@ use anyhow::Result;
 
 use crate::jpeg::{segments::*, Jpeg, Marker::*, ProcessSegment, Segment};
 
-pub struct DebugProcessor;
+pub struct DebugReader<F> {
+    log: F,
+}
 
-impl ProcessSegment for DebugProcessor {
-    type Output = ();
+impl<F> DebugReader<F> {
+    pub fn new(log: F) -> Self {
+        Self { log }
+    }
+}
 
-    fn process_segment(&mut self, _: &mut Jpeg, section: &Segment) -> Result<Self::Output> {
+macro_rules! log {
+    ($log:expr, $($arg:tt)*) => {
+        ($log)(format!($($arg)*));
+    };
+}
+
+impl<F: Fn(String)> ProcessSegment for DebugReader<F> {
+    fn process_segment(&self, _: &Jpeg, segment: &Segment) -> Result<()> {
         let Segment {
             index,
             marker,
             data,
-        } = section;
+        } = segment;
         let marker = *marker;
 
         match marker {
@@ -20,17 +32,15 @@ impl ProcessSegment for DebugProcessor {
             _ => {}
         }
 
-        println!(
-            "[{:04X}] FF{:02X} {:?}",
-            index,
+        log!(
+            self.log,
+            "[{index:04X}] FF{:02X} {marker:?}",
             Into::<u8>::into(marker),
-            marker
         );
 
         match marker {
             // [SPEC] B.2.2 -- Frame header syntax
             SOF0 | SOF1 | SOF2 => {
-                println!("\tStart of Frame");
                 let SofData {
                     precision,
                     width,
@@ -38,8 +48,7 @@ impl ProcessSegment for DebugProcessor {
                     components,
                 } = SofData::try_from(&data[..])?;
 
-                println!(
-                    "\tPrecision: {precision}, Width: {width}, Height: {height}, Num Components: {}",
+                log!(self.log, "\tStart of Frame\n\tPrecision: {precision}, Width: {width}, Height: {height}, Num Components: {}",
                     components.len()
                 );
 
@@ -50,16 +59,15 @@ impl ProcessSegment for DebugProcessor {
                     table_index,
                 } in components
                 {
-                    println!(
+                    log!(self.log,
                         "\tComponent: ID={component_id}, HFactor={h_factor}, VFactor={v_factor}, Quant Table={table_index}",
                     );
                 }
-                println!();
+                log!(self.log, "");
             }
 
             // [SPEC] B.2.3 -- Scan header syntax
             SOS => {
-                println!("\tStart of Scan");
                 let SosData {
                     spectral_start,
                     spectral_end,
@@ -69,25 +77,21 @@ impl ProcessSegment for DebugProcessor {
                     ..
                 } = SosData::try_from(&data[..])?;
 
+                log!(self.log, "\tStart of Scan");
                 for ScanComponentData {
                     component_id,
                     dc_table_index,
                     ac_table_index,
                 } in components
                 {
-                    println!(
-                        "\tComponent: ID={component_id}, DC Table={dc_table_index}, AC Table={ac_table_index}"
-                    );
+                    log!(self.log, "\tComponent: ID={component_id}, DC Table={dc_table_index}, AC Table={ac_table_index}");
                 }
-
-                println!(
-                    "\tSpectralStart: {spectral_start}, SpectralEnd: {spectral_end}, AH: {approx_high}, AL: {approx_low}");
-                println!();
+                log!(self.log, "\tSpectralStart={spectral_start}, SpectralEnd={spectral_end}, AH={approx_high}, AL={approx_low}\n");
             }
 
             // [SPEC] B.2.4.1 -- Quantization table-specification syntax
             DQT => {
-                println!("\tDefine Quantization Table");
+                log!(self.log, "\tDefine Quantization Table");
                 let DqtData { tables } = DqtData::try_from(&data[..])?;
                 for (
                     index,
@@ -98,20 +102,16 @@ impl ProcessSegment for DebugProcessor {
                     },
                 ) in tables.into_iter().enumerate()
                 {
-                    println!(
-                        "\tTable {}: Precision: {}, Table Index: {}",
-                        index, precision, table_index
-                    );
-                    println!("\t\tValues: {:?}", values.to_vec());
+                    log!(self.log, "\tTable {index}: Precision={precision}, Table Index={table_index}\n\t\tValues: {:?}", values.to_vec());
                 }
-                println!();
+                log!(self.log, "");
             }
 
             // [SPEC] Table B.2.4.2 -- Huffman table-specification syntax
             DHT => {
-                println!("\tDefine Huffman Table");
                 let DhtData { tables } = DhtData::try_from(&data[..])?;
 
+                log!(self.log, "\tDefine Huffman Table");
                 for (
                     index,
                     HuffmanTableData {
@@ -122,21 +122,15 @@ impl ProcessSegment for DebugProcessor {
                     },
                 ) in tables.into_iter().enumerate()
                 {
-                    println!(
-                        "\tTable: {}, Class: {}, Index: {}",
-                        index, table_class, table_index
-                    );
-                    println!("\t\tSizes: {:?}", sizes);
-                    println!("\t\tValues: {:?}", values);
+                    log!(self.log, "\tTable: {index}, Class: {table_class}, Index: {table_index}\n\t\tSizes: {sizes:?}\n\t\tValues: {values:?}");
                 }
-                println!();
+                log!(self.log, "");
             }
 
             // [SPEC] B.2.4.4 -- Restart interval definition syntax
             DRI => {
                 let count = u16::from_be_bytes(data[0..2].try_into().unwrap());
-                println!("\tDefine Restart Interval: {}", count);
-                println!();
+                log!(self.log, "\tDefine Restart Interval: {count}\n");
             }
 
             _ => {}

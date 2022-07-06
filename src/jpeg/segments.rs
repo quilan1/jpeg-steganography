@@ -128,7 +128,7 @@ impl TryFrom<&[u8]> for DqtData {
 
 #[derive(Default)]
 pub struct HuffmanTableData {
-    pub table_class: u32,
+    pub table_class: usize,
     pub table_index: usize,
     pub sizes: Vec<usize>,
     pub values: Vec<u8>,
@@ -160,7 +160,7 @@ impl TryFrom<&[u8]> for HuffmanTableData {
         let values = data[0..num_values].to_vec();
 
         Ok(Self {
-            table_class: table_class as u32,
+            table_class: table_class as usize,
             table_index: table_index as usize,
             sizes: sizes.into_iter().map(|v| v as usize).collect(),
             values,

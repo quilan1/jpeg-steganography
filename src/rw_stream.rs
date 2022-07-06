@@ -66,9 +66,7 @@ impl<'a> RWStream<'a> {
     }
 
     pub fn read_huffman_dc(&mut self) -> Result<u8> {
-        let value = self
-            .reader
-            .read_huffman(self.dc_tree.unwrap().reader())?;
+        let value = self.reader.read_huffman(self.dc_tree.unwrap().reader())?;
 
         self.writer
             .write_huffman(&self.dc_tree.unwrap().writer(), value)?;
@@ -77,9 +75,7 @@ impl<'a> RWStream<'a> {
     }
 
     pub fn read_huffman_ac(&mut self) -> Result<u8> {
-        let value = self
-            .reader
-            .read_huffman(self.ac_tree.unwrap().reader())?;
+        let value = self.reader.read_huffman(self.ac_tree.unwrap().reader())?;
 
         self.writer
             .write_huffman(&self.ac_tree.unwrap().writer(), value)?;

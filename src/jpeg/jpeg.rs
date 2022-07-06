@@ -1,7 +1,6 @@
-use std::path::Path;
+use std::{io::Write, path::Path};
 
 use anyhow::Result;
-use binary_rw::{BinaryWriter, Endian, WriteStream};
 
 use crate::rw_stream::HuffmanRWTree;
 
@@ -20,24 +19,23 @@ pub struct Segment {
 #[derive(Default)]
 pub struct Jpeg {
     pub frame: SofData,
-    pub dc_trees: [HuffmanRWTree; 2],
-    pub ac_trees: [HuffmanRWTree; 2],
+    pub huffman_trees: [HuffmanRWTree; 4],
     pub restart_interval: u32,
     pub scan: SosData,
     pub segments: Vec<Segment>,
 }
 
 impl Jpeg {
-    pub fn read_file<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub fn read_file_segments<P: AsRef<Path>>(path: P) -> Result<Self> {
         let bytes = std::fs::read(path.as_ref())?;
-        let sections = Self::scan_sections(bytes);
+        let sections = Self::scan_segments(bytes);
         Ok(Self {
             segments: sections,
             ..Default::default()
         })
     }
 
-    fn scan_sections(bytes: Vec<u8>) -> Vec<Segment> {
+    fn scan_segments(bytes: Vec<u8>) -> Vec<Segment> {
         use Marker::*;
         let mut markers = Vec::new();
 
@@ -101,94 +99,91 @@ impl Jpeg {
         sections
     }
 
-    pub fn process_segments<T, P, F>(&mut self, processor: &mut P, callback: F) -> Result<()>
+    pub fn process_segments_mut<P>(&mut self, processor: &mut P) -> Result<()>
     where
-        P: ProcessSegment<Output = T>,
-        F: Fn(T) + Copy,
+        P: ProcessSegmentMut,
     {
         let segments = self.segments.clone();
         for segment in segments {
-            // callback(processor.process_segment(self, &segment)?);
-            self.process_segment(&segment, processor, callback)?;
-        }
-
-        Ok(())
-    }
-
-    fn process_segment<T, P, F>(
-        &mut self,
-        segment: &Segment,
-        processor: &mut P,
-        callback: F,
-    ) -> Result<()>
-    where
-        P: ProcessSegment<Output = T>,
-        F: Fn(T),
-    {
-        match segment.marker {
-            SOF0 | SOF1 | SOF2 => self.frame = SofData::try_from(&segment.data[..])?,
-            SOS => self.scan = SosData::try_from(&segment.data[..])?,
-            DRI => {
-                let dri_data = DriData::try_from(&segment.data[..])?;
-                self.restart_interval = dri_data.count;
+            match segment.marker {
+                SOF0 | SOF1 | SOF2 => self.frame = SofData::try_from(&segment.data[..])?,
+                SOS => self.scan = SosData::try_from(&segment.data[..])?,
+                DRI => {
+                    let dri_data = DriData::try_from(&segment.data[..])?;
+                    self.restart_interval = dri_data.count;
+                }
+                _ => {}
             }
-            _ => {}
+
+            processor.process_segment(self, &segment)?;
         }
 
-        callback(processor.process_segment(self, &segment)?);
         Ok(())
     }
 
-    pub fn write_segment<W: WriteStream>(writer: &mut W, section: &Segment) -> Result<()> {
+    pub fn process_segments<P>(&self, processor: &mut P) -> Result<()>
+    where
+        P: ProcessSegment,
+    {
+        for segment in &self.segments {
+            processor.process_segment(&self, &segment)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn write_segment<W: Write>(writer: &mut W, section: &Segment) -> Result<()> {
         let Segment { marker, data, .. } = section;
 
-        let mut writer = BinaryWriter::new(writer, Endian::Big);
-
-        writer.write_u8(0xFF)?;
-        writer.write_u8(Into::<u8>::into(*marker))?;
+        writer.write(&[0xFF])?;
+        writer.write(&[u8::from(*marker)])?;
 
         match *marker {
             SOI | EOI => {}
             RST(_) => {
-                writer.write_bytes(data)?;
+                writer.write(data)?;
             }
             SOS => {
                 let num_components = data[0];
                 let length = 6 + 2 * num_components;
-                writer.write_u16(length as u16)?;
-                writer.write_bytes(data)?;
+                writer.write(&(length as u16).to_be_bytes())?;
+                writer.write(data)?;
             }
             _ => {
-                writer.write_u16(data.len() as u16 + 2)?;
-                writer.write_bytes(data)?;
+                writer.write(&(data.len() as u16 + 2).to_be_bytes())?;
+                writer.write(data)?;
             }
         }
 
         Ok(())
     }
 
-    pub fn huffman_table(&self, table_class: u32, table_index: usize) -> &HuffmanRWTree {
-        if table_class == 0 {
-            &self.dc_trees[table_index]
-        } else {
-            &self.ac_trees[table_index]
-        }
+    pub fn get_huffman_trees(
+        &self,
+        dc_table_index: usize,
+        ac_table_index: usize,
+    ) -> (&HuffmanRWTree, &HuffmanRWTree) {
+        (
+            &self.huffman_trees[dc_table_index],
+            &self.huffman_trees[2 + ac_table_index],
+        )
     }
 
-    pub fn huffman_table_mut(
+    pub fn set_huffman_tree(
         &mut self,
-        table_class: u32,
+        table_class: usize,
         table_index: usize,
-    ) -> &mut HuffmanRWTree {
-        if table_class == 0 {
-            &mut self.dc_trees[table_index]
-        } else {
-            &mut self.ac_trees[table_index]
-        }
+        tree: HuffmanRWTree,
+    ) {
+        let index = 2 * table_class as usize + table_index;
+        self.huffman_trees[index] = tree;
     }
 }
 
+pub trait ProcessSegmentMut {
+    fn process_segment(&mut self, jpeg: &mut Jpeg, segment: &Segment) -> Result<()>;
+}
+
 pub trait ProcessSegment {
-    type Output;
-    fn process_segment(&mut self, jpeg: &mut Jpeg, segment: &Segment) -> Result<Self::Output>;
+    fn process_segment(&self, jpeg: &Jpeg, segment: &Segment) -> Result<()>;
 }

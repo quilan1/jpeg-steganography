@@ -1,9 +1,12 @@
 use num_bigint::BigUint;
 use num_traits::{identities::Zero, One, ToPrimitive};
 
-#[derive(Debug)]
 pub struct FNS {
     pub digits: Vec<usize>,
+}
+
+pub struct SFNS {
+    pub digits: Vec<FNS>,
 }
 
 impl FNS {
@@ -13,15 +16,7 @@ impl FNS {
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut digits = self.digits.clone();
-        digits.reverse();
-
-        let mut result = BigUint::zero();
-        for (index, digit) in digits.into_iter().enumerate() {
-            result += BigUint::from(digit) * factorial(index + 1);
-        }
-
-        result.to_bytes_be()
+        BigUint::from(self).to_bytes_be()
     }
 
     pub fn to_permutation(&self, size: usize) -> Vec<usize> {
@@ -55,6 +50,42 @@ impl FNS {
 
         Self { digits }
     }
+
+    pub fn permute_values(&self, values: &mut [u8]) {
+        let permutation = self.to_permutation(values.len());
+        let mut old_values = values.to_vec();
+        old_values.sort();
+
+        for (index, perm) in permutation.into_iter().enumerate() {
+            values[index] = old_values[perm];
+        }
+    }
+
+    pub fn read_values(values: &[u8]) -> FNS {
+        let mut sorted_values = values.to_vec();
+        sorted_values.sort();
+
+        let mut permutation = Vec::new();
+        for value in values {
+            permutation.push(sorted_values.iter().position(|v| value == v).unwrap());
+        }
+
+        Self::from_permutation(permutation.clone())
+    }
+}
+
+impl From<&FNS> for BigUint {
+    fn from(fns: &FNS) -> Self {
+        let mut digits = fns.digits.clone();
+        digits.reverse();
+
+        let mut result = BigUint::zero();
+        for (index, digit) in digits.into_iter().enumerate() {
+            result += BigUint::from(digit) * factorial(index + 1);
+        }
+
+        result
+    }
 }
 
 impl<T> From<T> for FNS
@@ -87,6 +118,74 @@ where
     }
 }
 
+impl SFNS {
+    pub fn new(bytes: &Vec<u8>, sizes: &Vec<usize>) -> Option<Self> {
+        let value = BigUint::from_bytes_be(&bytes);
+
+        let (bases, base) = Self::calculate_bases(sizes);
+        if value >= base {
+            return None;
+        }
+
+        let mut value = value;
+        let mut digits = Vec::new();
+        for base_index in (0..bases.len()).rev() {
+            let digit = &value / &bases[base_index];
+            digits.push(FNS::from(digit.clone()));
+            value -= digit * &bases[base_index];
+        }
+        digits.reverse();
+
+        Some(Self { digits })
+    }
+
+    pub fn permute_values(&self, sizes: &Vec<usize>, values: &mut Vec<u8>) {
+        let digit_values = self.get_digit_values(sizes, values);
+        for (digit, values) in digit_values {
+            digit.permute_values(values);
+        }
+    }
+
+    pub fn from_size_values(sizes: &Vec<usize>, values: &Vec<u8>) -> Vec<u8> {
+        let mut result = BigUint::zero();
+        let base_values = Self::get_base_values(sizes, values);
+        for (base, values) in base_values {
+            result += base * BigUint::from(&FNS::read_values(values));
+        }
+        result.to_bytes_be()
+    }
+
+    pub fn max_message(sizes: &Vec<usize>) -> BigUint {
+        Self::calculate_bases(sizes).1
+    }
+
+    fn calculate_bases(sizes: &Vec<usize>) -> (Vec<BigUint>, BigUint) {
+        let mut bases = Vec::new();
+        let mut base = BigUint::from(1u8);
+        for size in gt_one(sizes) {
+            bases.push(base.clone());
+            base *= factorial(size);
+        }
+        (bases, base)
+    }
+
+    fn get_base_values<'a>(sizes: &Vec<usize>, values: &'a Vec<u8>) -> Vec<(BigUint, &'a [u8])> {
+        let (bases, _) = Self::calculate_bases(sizes);
+        bases.into_iter().zip(split_values(sizes, values)).collect()
+    }
+
+    fn get_digit_values<'a>(
+        &self,
+        sizes: &Vec<usize>,
+        values: &'a mut Vec<u8>,
+    ) -> Vec<(&FNS, &'a mut [u8])> {
+        self.digits
+            .iter()
+            .zip(split_values_mut(sizes, values))
+            .collect()
+    }
+}
+
 fn factorial(mut n: usize) -> BigUint {
     let mut result = BigUint::one();
 
@@ -98,79 +197,37 @@ fn factorial(mut n: usize) -> BigUint {
     result
 }
 
+fn gt_one<T: One + Copy + PartialOrd, V: AsRef<[T]>>(sizes: V) -> Vec<T> {
+    sizes
+        .as_ref()
+        .into_iter()
+        .cloned()
+        .filter(|&v| v > T::one())
+        .collect()
+}
+
+fn split_values<'a>(sizes: &[usize], mut values: &'a [u8]) -> Vec<&'a [u8]> {
+    let mut results = Vec::new();
+    for size in gt_one(&sizes) {
+        let (local_values, next_values) = values.split_at(size);
+        values = next_values;
+        results.push(local_values);
+    }
+    results
+}
+
+fn split_values_mut<'a>(sizes: &[usize], mut values: &'a mut [u8]) -> Vec<&'a mut [u8]> {
+    let mut results = Vec::new();
+    for size in gt_one(&sizes) {
+        let (local_values, next_values) = values.split_at_mut(size);
+        values = next_values;
+        results.push(local_values);
+    }
+    results
+}
+
 ////////////////////////////////////////////////////
 /// Methods for permuting huffman tables
-
-impl FNS {
-    pub fn permute_huffman_table<T: AsRef<[usize]>, U: AsMut<[u8]>>(
-        &self,
-        sizes: T,
-        mut values: U,
-    ) -> bool {
-        let sizes = sizes.as_ref();
-        let values = values.as_mut();
-
-        let mut offset = 0;
-        for &size in sizes {
-            if size <= self.digits.len() {
-                offset += size;
-                continue;
-            }
-
-            // Found valid span!
-            let permutation = self.to_permutation(size);
-            let values = &mut values[offset..offset + size];
-            let mut old_values = values.to_vec();
-            old_values.sort();
-
-            for (index, perm) in permutation.into_iter().enumerate() {
-                values[index] = old_values[perm];
-            }
-
-            return true;
-        }
-
-        false
-    }
-
-    pub fn read_huffman_table<T: AsRef<[usize]>, U: AsRef<[u8]>>(
-        sizes: T,
-        values: U,
-    ) -> Vec<Vec<u8>> {
-        let sizes = sizes.as_ref();
-        let values = values.as_ref();
-
-        let mut outputs = Vec::new();
-        let mut offset = 0;
-        for &size in sizes {
-            if size <= 1 {
-                offset += size;
-                continue;
-            }
-
-            let orig_values = &values[offset..offset + size];
-            let mut sorted_values = orig_values.to_vec();
-            sorted_values.sort();
-
-            let mut permutation = Vec::new();
-            for value in orig_values {
-                permutation.push(sorted_values.iter().position(|v| value == v).unwrap());
-            }
-
-            // Found valid span!
-            let bytes = Self::from_permutation(permutation.clone()).to_bytes();
-
-            if bytes == vec![0] {
-                offset += size;
-                continue;
-            }
-
-            outputs.push(bytes);
-        }
-
-        outputs
-    }
-}
 
 #[cfg(test)]
 mod test {
