@@ -64,7 +64,7 @@ fn write_secret_to_file<P: AsRef<std::path::Path>>(
             let secret_bytes = secret.to_bytes_be();
             let max_secret_len = max_secret.to_bytes_be().len();
             println!(
-                "{} DHT #{table_index}: Encoding secret in {} bytes out of {max_secret_len} total",
+                "{} Table #{table_index}: Encoding secret in {} bytes out of {max_secret_len} total",
                 ["DC", "AC"][table_class],
                 secret_bytes.len(),
             );
@@ -84,7 +84,7 @@ fn print_table_secret_sizes(jpeg: &jpeg::Jpeg) -> anyhow::Result<()> {
         |table_class, table_index, max_secret: num_bigint::BigUint, _| {
             let max_secret_len = max_secret.to_bytes_be().len();
             println!(
-                "{} DHT #{table_index} supports ~{max_secret_len} bytes.",
+                "{} Table #{table_index} supports ~{max_secret_len} bytes.",
                 ["DC", "AC"][table_class]
             );
         },
