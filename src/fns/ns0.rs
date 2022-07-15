@@ -3,14 +3,13 @@ use num_traits::{ToPrimitive, Zero};
 
 use super::traits::{Bases, DigitsBases, InnerDigits, MaxBaseValue, TryFromInput};
 
+type Input = u8;
 type Digit = usize;
+type InnerDigit = Vec<usize>;
+impl_base_ns!(NS0, Digit);
 
-// Input: usize
-// Digits: usize
-impl_ns!(BASE: NS0, Digit);
-
-impl InnerDigits<usize> for NS0 {
-    fn inner_digits(&self) -> Vec<usize> {
+impl InnerDigits<Digit> for NS0 {
+    fn inner_digits(&self) -> InnerDigit {
         self.digits.clone()
     }
 }
@@ -27,8 +26,8 @@ impl MaxBaseValue for NS0 {
     }
 }
 
-impl TryFromInput<usize> for NS0 {
-    fn try_from_input(value: BigUint, input: &usize) -> Option<Self>
+impl TryFromInput<Input> for NS0 {
+    fn try_from_input(value: BigUint, input: &Input) -> Option<Self>
     where
         Self: Sized,
     {
@@ -38,7 +37,7 @@ impl TryFromInput<usize> for NS0 {
 
         let mut value = value;
         let mut digits = Vec::new();
-        let bases = input.bases();
+        let bases = (*input as usize).bases();
         for base in bases {
             let digit = &value / &base;
             value -= &digit * &base;
@@ -57,7 +56,7 @@ impl NS0 {
         let digits = self.digits.clone();
         let mut permutation = Vec::new();
         for digit in digits {
-            permutation.push(available.remove(digit));
+            permutation.push(available.remove(digit as usize));
         }
 
         permutation.extend(&available);
@@ -71,7 +70,7 @@ impl NS0 {
         for perm_digit in &permutation[..permutation.len() - 1] {
             let index = available.iter().position(|v| v == perm_digit).unwrap();
             available.remove(index);
-            digits.push(index);
+            digits.push(index as Digit);
         }
 
         Self { digits }
@@ -104,15 +103,15 @@ impl NS0 {
 mod tests {
     use super::*;
 
-    fn n(v: u32, input: usize) -> Option<NS0> {
+    fn n(v: u32, input: u8) -> Option<NS0> {
         NS0::try_from_input(BigUint::from(v), &input)
     }
 
-    fn digits(v: u32, input: usize) -> Option<Vec<usize>> {
+    fn digits(v: u32, input: u8) -> Option<InnerDigit> {
         n(v, input).map(|ns| ns.inner_digits())
     }
 
-    fn to_perm(v: u32, input: usize) -> Option<Vec<usize>> {
+    fn to_perm(v: u32, input: u8) -> Option<Vec<usize>> {
         n(v, input).map(|ns| ns.to_permutation())
     }
 

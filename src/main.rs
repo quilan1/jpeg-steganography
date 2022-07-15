@@ -5,9 +5,9 @@ mod lib_secret;
 mod processors;
 mod rw_stream;
 
-use clap::{arg, command, Command};
-
 fn main() -> anyhow::Result<()> {
+    use clap::{arg, command, Command};
+
     let matches = command!()
         .arg(arg!(path: <PATH> "Image path"))
         .subcommand(

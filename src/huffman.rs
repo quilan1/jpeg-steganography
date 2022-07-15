@@ -1,4 +1,4 @@
-pub fn construct_huffman_table<U: AsRef<[usize]>, V: AsRef<[u8]>>(
+pub fn construct_huffman_table<U: AsRef<[u8]>, V: AsRef<[u8]>>(
     sizes: U,
     values: V,
 ) -> Vec<(u8, Vec<u8>)> {

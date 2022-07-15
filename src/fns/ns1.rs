@@ -7,10 +7,10 @@ use super::{
 };
 
 type Digit = NS0;
-
-// Input: Vec<usize>
-// Digits: NS0
-impl_ns!(SUB: NS1, Digit, Vec<usize>);
+type Input = Vec<u8>;
+type InnerDigit = Vec<usize>;
+impl_base_ns!(NS1, Digit);
+impl_sub_ns!(NS1, Input, InnerDigit);
 
 impl NS1 {
     pub fn permute_values(&self, values: &mut [u8]) {
@@ -31,7 +31,7 @@ impl NS1 {
         results
     }
 
-    pub fn read_values<'a>(input: &Vec<usize>, values: &'a [u8]) -> Self {
+    pub fn read_values(input: &Vec<u8>, values: &[u8]) -> Self {
         let mut result = BigUint::zero();
         let values = Self::split_values(input, values);
         for (base, values) in super::traits::get_bases(&input.valid())
@@ -44,10 +44,10 @@ impl NS1 {
         NS1::try_from_input(result, input).unwrap()
     }
 
-    fn split_values<'a>(sizes: &Vec<usize>, mut values: &'a [u8]) -> Vec<&'a [u8]> {
+    fn split_values<'a>(sizes: &Input, mut values: &'a [u8]) -> Vec<&'a [u8]> {
         let mut results = Vec::new();
         for size in sizes.valid() {
-            let (local_values, next_values) = values.split_at(size);
+            let (local_values, next_values) = values.split_at(size as usize);
             values = next_values;
             results.push(local_values);
         }
@@ -60,11 +60,11 @@ mod tests {
     use super::super::traits::InnerDigits;
     use super::*;
 
-    fn n(v: u32, input: &Vec<usize>) -> Option<NS1> {
+    fn n(v: u32, input: &Vec<u8>) -> Option<NS1> {
         NS1::try_from_input(BigUint::from(v), input)
     }
 
-    fn digits(v: u32, input: &Vec<usize>) -> Option<Vec<Vec<usize>>> {
+    fn digits(v: u32, input: &Vec<u8>) -> Option<Vec<InnerDigit>> {
         n(v, input).map(|ns| ns.inner_digits())
     }
 

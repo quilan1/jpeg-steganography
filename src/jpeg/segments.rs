@@ -130,7 +130,7 @@ impl TryFrom<&[u8]> for DqtData {
 pub struct HuffmanTableData {
     pub table_class: usize,
     pub table_index: usize,
-    pub sizes: Vec<usize>,
+    pub sizes: Vec<u8>,
     pub values: Vec<u8>,
 }
 
@@ -138,7 +138,7 @@ impl ToVec for HuffmanTableData {
     fn to_vec(&self) -> Vec<u8> {
         let mut output = Vec::new();
         output.push(((self.table_class as u8) << 4) | self.table_index as u8);
-        output.extend(self.sizes.iter().map(|v| *v as u8));
+        output.extend(self.sizes.iter().map(|v| *v));
         output.extend(&self.values);
         output
     }
@@ -162,7 +162,7 @@ impl TryFrom<&[u8]> for HuffmanTableData {
         Ok(Self {
             table_class: table_class as usize,
             table_index: table_index as usize,
-            sizes: sizes.into_iter().map(|v| v as usize).collect(),
+            sizes,
             values,
         })
     }

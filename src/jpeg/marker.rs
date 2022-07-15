@@ -56,24 +56,3 @@ impl From<Marker> for u8 {
         }
     }
 }
-
-// impl Into<u8> for Marker {
-//     fn into(self) -> u8 {
-//         use Marker::*;
-
-//         match self {
-//             SOF0 => 0xC0,
-//             SOF1 => 0xC1,
-//             SOF2 => 0xC2,
-//             DHT => 0xC4,
-//             RST(value) => 0xD0 + value,
-//             SOI => 0xD8,
-//             EOI => 0xD9,
-//             SOS => 0xDA,
-//             DQT => 0xDB,
-//             DNL => 0xDC,
-//             DRI => 0xDD,
-//             Unknown(value) => value,
-//         }
-//     }
-// }

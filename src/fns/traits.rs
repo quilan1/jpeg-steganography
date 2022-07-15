@@ -27,11 +27,8 @@ where
         for (digit, base) in rev_digits.zip(rev_bases) {
             results.push((digit.clone(), base));
         }
-        results.reverse();
 
-        // for (digit, base) in digits.into_iter().zip(bases) {
-        //     results.push((digit.clone(), base));
-        // }
+        results.reverse();
         results
     }
 }
@@ -86,7 +83,7 @@ macro_rules! impl_base_ns {
 }
 
 macro_rules! impl_sub_ns {
-    ($struct:tt, $input:ty) => {
+    ($struct:tt, $input:ty, $inner_digit:ty) => {
         impl super::traits::Bases for $struct {
             fn bases<U>(&self) -> Vec<BigUint> {
                 super::traits::get_bases(self)
@@ -99,8 +96,8 @@ macro_rules! impl_sub_ns {
             }
         }
 
-        impl super::traits::InnerDigits<$input> for $struct {
-            fn inner_digits(&self) -> Vec<$input> {
+        impl super::traits::InnerDigits<$inner_digit> for $struct {
+            fn inner_digits(&self) -> Vec<$inner_digit> {
                 self.digits.iter().map(|d| d.inner_digits()).collect()
             }
         }
@@ -110,17 +107,6 @@ macro_rules! impl_sub_ns {
                 super::traits::try_from_input(value, input)
             }
         }
-    };
-}
-
-macro_rules! impl_ns {
-    (BASE: $class:tt, $digit:ty) => {
-        impl_base_ns!($class, $digit);
-    };
-
-    (SUB: $class:tt, $digit:ty, $input:ty) => {
-        impl_base_ns!($class, $digit);
-        impl_sub_ns!($class, $input);
     };
 }
 
@@ -136,17 +122,26 @@ impl MaxBaseValue for usize {
     }
 }
 
-impl MaxBaseValue for Vec<usize> {
+impl MaxBaseValue for u8 {
     fn max_base_value(&self) -> BigUint {
-        base_info(self).0
+        super::factorial(*self as usize)
     }
 }
 
-impl MaxBaseValue for Vec<Vec<usize>> {
-    fn max_base_value(&self) -> BigUint {
-        base_info(self).0
-    }
+macro_rules! impl_mbv {
+    ($struct:ty) => {
+        impl MaxBaseValue for $struct {
+            fn max_base_value(&self) -> BigUint {
+                base_info(self).0
+            }
+        }
+    };
 }
+
+impl_mbv!(Vec<u8>);
+impl_mbv!(Vec<usize>);
+impl_mbv!(Vec<Vec<u8>>);
+impl_mbv!(Vec<Vec<usize>>);
 
 /////////////////////////////////////////////
 
@@ -161,11 +156,7 @@ pub trait Bases {
 }
 
 impl Bases for usize {
-    fn bases<U>(&self) -> Vec<BigUint>
-    where
-        Self: Sized + ValidInputs<Vec<U>>,
-        U: MaxBaseValue,
-    {
+    fn bases<U>(&self) -> Vec<BigUint> {
         (1..*self).rev().map(|v| super::factorial(v)).collect()
     }
 }
@@ -185,8 +176,8 @@ pub trait ValueBases {
     }
 }
 
-impl ValueBases for Vec<usize> {}
-impl ValueBases for Vec<Vec<usize>> {}
+impl ValueBases for Vec<u8> {}
+impl ValueBases for Vec<Vec<u8>> {}
 
 /////////////////////////////////////////////
 
@@ -219,29 +210,35 @@ pub trait ValidInputs<O> {
     fn valid(&self) -> O;
 }
 
+impl ValidInputs<Vec<u8>> for u8 {
+    fn valid(&self) -> Vec<u8> {
+        (1..=*self).rev().collect()
+    }
+}
+
 impl ValidInputs<Vec<usize>> for usize {
     fn valid(&self) -> Vec<usize> {
         (1..=*self).rev().collect()
     }
 }
 
-impl ValidInputs<Vec<usize>> for Vec<usize> {
-    fn valid(&self) -> Vec<usize> {
-        self.into_iter()
-            .cloned()
-            .filter(|v| !v.valid().is_empty())
-            .collect()
-    }
+macro_rules! impl_valid_inputs {
+    ($struct:ty) => {
+        impl ValidInputs<Self> for $struct {
+            fn valid(&self) -> Self {
+                self.into_iter()
+                    .cloned()
+                    .filter(|v| !v.valid().is_empty())
+                    .collect()
+            }
+        }
+    };
 }
 
-impl ValidInputs<Vec<Vec<usize>>> for Vec<Vec<usize>> {
-    fn valid(&self) -> Vec<Vec<usize>> {
-        self.into_iter()
-            .cloned()
-            .filter(|v| !v.valid().is_empty())
-            .collect()
-    }
-}
+impl_valid_inputs!(Vec<u8>);
+impl_valid_inputs!(Vec<usize>);
+impl_valid_inputs!(Vec<Vec<u8>>);
+impl_valid_inputs!(Vec<Vec<usize>>);
 
 /////////////////////////////////////////////
 
