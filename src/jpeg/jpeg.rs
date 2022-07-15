@@ -1,4 +1,4 @@
-use std::{io::Write, path::Path};
+use std::io::{Read, Write};
 
 use anyhow::Result;
 
@@ -26,9 +26,11 @@ pub struct Jpeg {
 }
 
 impl Jpeg {
-    pub fn read_file_segments<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let bytes = std::fs::read(path.as_ref())?;
-        let sections = Self::scan_segments(bytes);
+    pub fn read_segments<R: Read>(reader: &mut R) -> Result<Self> {
+        let mut buf = Vec::new();
+        reader.read_to_end(&mut buf)?;
+
+        let sections = Self::scan_segments(buf);
         Ok(Self {
             segments: sections,
             ..Default::default()
