@@ -5,10 +5,8 @@ use bitstream_io::{
     huffman::{compile_read_tree, compile_write_tree},
     BigEndian,
 };
-use num_bigint::BigUint;
 
 use crate::{
-    factorial_number_system::SFNS,
     huffman::construct_huffman_table,
     jpeg::{process_entropy_stream, segments::*, Jpeg, Marker, ProcessSegmentMut, Segment},
     rw_stream::HuffmanRWTree,
@@ -25,9 +23,7 @@ impl<W: Write, F> DhtWriter<W, F> {
     }
 }
 
-impl<W: Write, F: Fn(usize, usize, BigUint) -> Option<Vec<u8>>> ProcessSegmentMut
-    for DhtWriter<W, F>
-{
+impl<W: Write, F: Fn(&mut HuffmanTableData)> ProcessSegmentMut for DhtWriter<W, F> {
     fn process_segment(&mut self, jpeg: &mut Jpeg, segment: &Segment) -> Result<()> {
         let mut segment = segment.clone();
         match segment.marker {
@@ -39,14 +35,7 @@ impl<W: Write, F: Fn(usize, usize, BigUint) -> Option<Vec<u8>>> ProcessSegmentMu
                         &table.values,
                     ))?;
 
-                    let table_data = SFNS::max_message(&table.sizes);
-                    if let Some(secret) =
-                        (self.callback)(table.table_class, table.table_index, table_data)
-                    {
-                        if let Some(sfns) = SFNS::new(&secret, &table.sizes) {
-                            sfns.permute_values(&table.sizes, &mut table.values);
-                        }
-                    }
+                    (self.callback)(table);
 
                     let write_tree = Box::new([compile_write_tree::<BigEndian, _>(
                         construct_huffman_table(&table.sizes, &table.values),

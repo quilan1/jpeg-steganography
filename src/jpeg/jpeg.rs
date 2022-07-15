@@ -121,7 +121,7 @@ impl Jpeg {
         Ok(())
     }
 
-    pub fn process_segments<P>(&self, processor: &mut P) -> Result<()>
+    pub fn process_segments<P>(&self, processor: &P) -> Result<()>
     where
         P: ProcessSegment,
     {

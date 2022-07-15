@@ -1,4 +1,4 @@
-mod factorial_number_system;
+mod fns;
 mod huffman;
 mod jpeg;
 mod processors;
@@ -47,65 +47,73 @@ fn write_secret_to_file<P: AsRef<std::path::Path>>(
     path: P,
     secret: &str,
 ) -> anyhow::Result<()> {
-    print_table_secret_sizes(jpeg)?;
+    use fns::{MaxBaseValue, TryFromInput};
+    use jpeg::segments::HuffmanTableData;
+    use std::cell::RefCell;
 
-    let has_written = std::rc::Rc::new(std::sync::Mutex::new(false));
+    let table_sizes = RefCell::<Vec<Vec<usize>>>::new(Vec::new());
+    let table_values = RefCell::<Vec<Vec<u8>>>::new(Vec::new());
+    let read_processor = processors::DhtReader::new(|table: &HuffmanTableData| {
+        table_sizes.borrow_mut().push(table.sizes.clone());
+        table_values.borrow_mut().push(table.values.clone());
+    });
+    jpeg.process_segments(&read_processor)?;
+
+    let table_sizes = table_sizes.into_inner();
+    let mut table_values = table_values.into_inner();
+    let max_len = table_sizes.max_base_value().to_bytes_be().len();
+    println!("Maximum message length: ~{max_len} bytes");
+
+    let ns = {
+        let value = num_bigint::BigUint::from_bytes_be(&encode_secret(secret));
+        match fns::NS2::try_from_input(value, &table_sizes) {
+            None => anyhow::bail!("Couldn't fit message into ~{max_len} bytes"),
+            Some(ns) => ns,
+        }
+    };
+    ns.permute_values(&mut table_values);
+
+    let table_index = RefCell::new(0usize);
     let writer = std::io::BufWriter::new(std::fs::File::create(path)?);
-    let secret = num_bigint::BigUint::from_bytes_be(&encode_secret(secret));
-    let mut processor = processors::DhtWriter::new(
-        writer,
-        |table_class, table_index, max_secret: num_bigint::BigUint| {
-            let mut has_written = has_written.lock().unwrap();
-
-            if *has_written || max_secret <= secret {
-                return None;
-            }
-
-            let secret_bytes = secret.to_bytes_be();
-            let max_secret_len = max_secret.to_bytes_be().len();
-            println!(
-                "{} Table #{table_index}: Encoding secret in {} bytes out of {max_secret_len} total",
-                ["DC", "AC"][table_class],
-                secret_bytes.len(),
-            );
-
-            *has_written = true;
-            Some(secret_bytes)
-        },
-    )?;
+    let mut processor = processors::DhtWriter::new(writer, |table: &mut HuffmanTableData| {
+        let mut table_index = table_index.borrow_mut();
+        table.values = table_values[*table_index].clone();
+        *table_index += 1;
+    })?;
 
     jpeg.process_segments_mut(&mut processor)?;
 
-    Ok(())
-}
-
-fn print_table_secret_sizes(jpeg: &jpeg::Jpeg) -> anyhow::Result<()> {
-    let mut processor = processors::DhtReader::new(
-        |table_class, table_index, max_secret: num_bigint::BigUint, _| {
-            let max_secret_len = max_secret.to_bytes_be().len();
-            println!(
-                "{} Table #{table_index} supports ~{max_secret_len} bytes.",
-                ["DC", "AC"][table_class]
-            );
-        },
-    );
-
-    jpeg.process_segments(&mut processor)?;
-
+    println!("Message successfully written!");
     Ok(())
 }
 
 fn read_secret_from_jpeg(jpeg: &jpeg::Jpeg) -> anyhow::Result<()> {
-    let mut processor = processors::DhtReader::new(|_, _, _, maybe_secret: Vec<u8>| {
-        if maybe_secret.len() <= 2 || maybe_secret[0] != 0xBE || maybe_secret[1] != 0xEF {
-            return;
-        }
+    use jpeg::segments::HuffmanTableData;
+    use std::cell::RefCell;
 
-        let secret = String::from_utf8(maybe_secret[2..].to_vec()).unwrap();
-        println!("Found secret: {secret}");
+    let table_sizes = RefCell::<Vec<Vec<usize>>>::new(Vec::new());
+    let table_values = RefCell::<Vec<Vec<u8>>>::new(Vec::new());
+    let read_processor = processors::DhtReader::new(|table: &HuffmanTableData| {
+        table_sizes.borrow_mut().push(table.sizes.clone());
+        table_values.borrow_mut().push(table.values.clone());
     });
+    jpeg.process_segments(&read_processor)?;
 
-    jpeg.process_segments(&mut processor)?;
+    let table_sizes = table_sizes.into_inner();
+    let table_values = table_values.into_inner();
+
+    let ns = fns::NS2::read_values(&table_sizes, &table_values);
+    let data = num_bigint::BigUint::from(ns).to_bytes_be();
+
+    if data.len() <= 2 || data[0] != 0xBE || data[1] != 0xEF {
+        println!("No message found within file");
+        return Ok(());
+    }
+
+    println!(
+        "Encoded message: {}",
+        String::from_utf8(data[2..].to_vec())?
+    );
 
     Ok(())
 }
