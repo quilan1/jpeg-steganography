@@ -1,9 +1,7 @@
 use num_bigint::BigUint;
 use num_traits::{ToPrimitive, Zero};
 
-use super::traits::{
-    Bases, Digits, DigitsBases, InnerDigits, MaxBaseValue, TryFromInput, ValidInputs,
-};
+use super::traits::{Bases, DigitsBases, InnerDigits, MaxBaseValue, TryFromInput};
 
 type Digit = usize;
 

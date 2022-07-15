@@ -67,15 +67,15 @@ macro_rules! impl_base_ns {
             }
         }
 
-        impl DigitsBases<$digit> for $struct {}
+        impl super::traits::DigitsBases<$digit> for $struct {}
 
-        impl Digits<$digit> for $struct {
+        impl super::traits::Digits<$digit> for $struct {
             fn digits(&self) -> &Vec<$digit> {
                 &self.digits
             }
         }
 
-        impl ValidInputs<Vec<$digit>> for $struct {
+        impl super::traits::ValidInputs<Vec<$digit>> for $struct {
             fn valid(&self) -> Vec<$digit> {
                 self.digits.clone()
             }
@@ -87,25 +87,25 @@ macro_rules! impl_base_ns {
 
 macro_rules! impl_sub_ns {
     ($struct:tt, $input:ty) => {
-        impl Bases for $struct {
+        impl super::traits::Bases for $struct {
             fn bases<U>(&self) -> Vec<BigUint> {
                 super::traits::get_bases(self)
             }
         }
 
-        impl MaxBaseValue for $struct {
+        impl super::traits::MaxBaseValue for $struct {
             fn max_base_value(&self) -> BigUint {
                 super::traits::base_info(self).0
             }
         }
 
-        impl InnerDigits<$input> for $struct {
+        impl super::traits::InnerDigits<$input> for $struct {
             fn inner_digits(&self) -> Vec<$input> {
                 self.digits.iter().map(|d| d.inner_digits()).collect()
             }
         }
 
-        impl TryFromInput<$input> for $struct {
+        impl super::traits::TryFromInput<$input> for $struct {
             fn try_from_input(value: BigUint, input: &$input) -> Option<Self> {
                 super::traits::try_from_input(value, input)
             }

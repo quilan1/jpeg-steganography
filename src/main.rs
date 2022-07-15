@@ -51,6 +51,7 @@ fn write_secret_to_file<P: AsRef<std::path::Path>>(
     use jpeg::segments::HuffmanTableData;
     use std::cell::RefCell;
 
+    let start = std::time::Instant::now();
     let table_sizes = RefCell::<Vec<Vec<usize>>>::new(Vec::new());
     let table_values = RefCell::<Vec<Vec<u8>>>::new(Vec::new());
     let read_processor = processors::DhtReader::new(|table: &HuffmanTableData| {
@@ -83,7 +84,10 @@ fn write_secret_to_file<P: AsRef<std::path::Path>>(
 
     jpeg.process_segments_mut(&mut processor)?;
 
-    println!("Message successfully written!");
+    println!(
+        "Message successfully written in {} ms!",
+        start.elapsed().as_millis()
+    );
     Ok(())
 }
 
@@ -91,6 +95,7 @@ fn read_secret_from_jpeg(jpeg: &jpeg::Jpeg) -> anyhow::Result<()> {
     use jpeg::segments::HuffmanTableData;
     use std::cell::RefCell;
 
+    let start = std::time::Instant::now();
     let table_sizes = RefCell::<Vec<Vec<usize>>>::new(Vec::new());
     let table_values = RefCell::<Vec<Vec<u8>>>::new(Vec::new());
     let read_processor = processors::DhtReader::new(|table: &HuffmanTableData| {
@@ -111,7 +116,8 @@ fn read_secret_from_jpeg(jpeg: &jpeg::Jpeg) -> anyhow::Result<()> {
     }
 
     println!(
-        "Encoded message: {}",
+        "Encoded message read in {} ms:\n\t'{}'",
+        start.elapsed().as_millis(),
         String::from_utf8(data[2..].to_vec())?
     );
 

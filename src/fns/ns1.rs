@@ -2,7 +2,7 @@ use num_bigint::BigUint;
 use num_traits::Zero;
 
 use super::{
-    traits::{Bases, Digits, DigitsBases, InnerDigits, MaxBaseValue, TryFromInput, ValidInputs},
+    traits::{DigitsBases, TryFromInput, ValidInputs},
     NS0,
 };
 
@@ -57,6 +57,7 @@ impl NS1 {
 
 #[cfg(test)]
 mod tests {
+    use super::super::traits::InnerDigits;
     use super::*;
 
     fn n(v: u32, input: &Vec<usize>) -> Option<NS1> {

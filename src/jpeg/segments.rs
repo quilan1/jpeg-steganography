@@ -251,7 +251,7 @@ impl ToVec for SosData {
             output.extend(table.to_vec());
         }
         output.push(self.spectral_start as u8);
-        output.push(self.spectral_end as u8);
+        output.push((self.spectral_end - 1) as u8);
         output.push(((self.approx_high as u8) << 4) | self.approx_low as u8);
         output.extend(&self.image_data);
         output
