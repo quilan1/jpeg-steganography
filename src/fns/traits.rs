@@ -227,7 +227,10 @@ impl ValidInputs<Vec<usize>> for usize {
 
 impl ValidInputs<Vec<usize>> for Vec<usize> {
     fn valid(&self) -> Vec<usize> {
-        self.into_iter().cloned().filter(|v| *v > 1).collect()
+        self.into_iter()
+            .cloned()
+            .filter(|v| !v.valid().is_empty())
+            .collect()
     }
 }
 

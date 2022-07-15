@@ -71,7 +71,7 @@ fn read_secret_from_file<P: AsRef<std::path::Path>>(in_file: P) -> anyhow::Resul
             println!("No message found within file");
         }
         Some(secret) => {
-            println!("Secret: {}", String::from_utf8(secret)?);
+            println!("Secret: '{}'", String::from_utf8(secret)?);
         }
     }
 

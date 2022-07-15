@@ -82,9 +82,18 @@ mod tests {
 
     #[test]
     fn test_invalid_1() {
-        assert_eq!(digits(1, &vec![2, 1, 1, 2]), Some(vec![vec![0], vec![1]]));
-        assert_eq!(digits(2, &vec![2, 1, 1, 2]), Some(vec![vec![1], vec![0]]));
-        assert_eq!(digits(3, &vec![2, 1, 1, 2]), Some(vec![vec![1], vec![1]]));
+        assert_eq!(
+            digits(1, &vec![2, 1, 1, 2]),
+            Some(vec![vec![0], vec![], vec![], vec![1]])
+        );
+        assert_eq!(
+            digits(2, &vec![2, 1, 1, 2]),
+            Some(vec![vec![1], vec![], vec![], vec![0]])
+        );
+        assert_eq!(
+            digits(3, &vec![2, 1, 1, 2]),
+            Some(vec![vec![1], vec![], vec![], vec![1]])
+        );
         assert_eq!(digits(4, &vec![2, 1, 1, 2]), None);
     }
 
@@ -129,11 +138,22 @@ mod tests {
     fn test_read_values() {
         let buf = vec![25, 15, 5, 0, 20, 10];
         assert_eq!(big(NS1::read_values(&vec![0, 6], &buf)), 679);
-        assert_eq!(big(NS1::read_values(&vec![1, 5], &buf)), 110);
+        assert_eq!(big(NS1::read_values(&vec![1, 5], &buf)), 79);
         assert_eq!(big(NS1::read_values(&vec![2, 4], &buf)), 31);
         assert_eq!(big(NS1::read_values(&vec![3, 3], &buf)), 31);
         assert_eq!(big(NS1::read_values(&vec![4, 2], &buf)), 47);
         assert_eq!(big(NS1::read_values(&vec![5, 1], &buf)), 110);
         assert_eq!(big(NS1::read_values(&vec![6, 0], &buf)), 679);
+    }
+
+    #[test]
+    fn test_case_failure1() {
+        let input = [0, 1, 5, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let mut values = vec![4, 2, 3, 5, 6, 7, 1, 0, 8, 9];
+
+        let ns = n(0, &input.to_vec()).unwrap();
+        ns.permute_values(&mut values);
+
+        assert_eq!(values, vec![4, 2, 3, 5, 6, 7, 1, 0, 8, 9]);
     }
 }

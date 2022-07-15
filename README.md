@@ -125,3 +125,30 @@ If we just leave it there, we're going to destroy the image, because it's been e
 ### Conclusion
 
 This was a fun project. I got to write a parser for JPEG files, play around with permutation math, and have fun with the huffman tables. What more could one ask for?
+
+---
+
+## Example
+
+Here is a picture of a mourning dove:
+
+![A nesting mourning dove](/docs/dove-small-in.jpg "A nesting mourning dove")
+
+And here is the same image, but with an encoded secret message inside: [dove-small-out.jpg](/docs/dove-small-out.jpg)
+
+Comparing the two files, yields a small difference in file size:
+
+| File | File Size|
+|-|-|
+| dove-small-in.jpg | 80320 |
+| dove-small-out.jpg | 80324 |
+
+The pixels, however, are identical. The only difference between the two files, is the order of the Huffman tables inside (and the stream, rewritten using the new table). The encoded secret is a simple lorem ipsum:
+
+"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam vel convallis ipsum. Ut sed ipsum diam. Nam mattis semper iaculis. Nam in dui eu erat aliquam dapibus."
+
+One should be able to verify this with:
+> cargo run -- docs/dove-small-out.jpg read
+
+Output:
+> Secret: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam vel convallis ipsum. Ut sed ipsum diam. Nam mattis semper iaculis. Nam in dui eu erat aliquam dapibus.'

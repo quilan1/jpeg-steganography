@@ -41,6 +41,7 @@ pub fn write_secret<R: Read, W: Write, T: AsRef<[u8]>>(
             Some(ns) => ns,
         }
     };
+
     ns.permute_values(&mut table_values);
 
     let table_index = RefCell::new(0usize);
@@ -57,7 +58,7 @@ pub fn write_secret<R: Read, W: Write, T: AsRef<[u8]>>(
 
     Ok(WriteData {
         approx_max_size,
-        secret_size
+        secret_size,
     })
 }
 

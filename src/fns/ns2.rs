@@ -54,11 +54,11 @@ mod tests {
     fn test_invalid() {
         assert_eq!(
             digits(1, &vec![vec![1, 1], vec![2]]),
-            Some(vec![vec![vec![1]]])
+            Some(vec![vec![vec![], vec![]], vec![vec![1]]])
         );
         assert_eq!(
             digits(1, &vec![vec![1], vec![2, 1, 1]]),
-            Some(vec![vec![vec![1]]])
+            Some(vec![vec![vec![]], vec![vec![1], vec![], vec![]]])
         );
     }
 
