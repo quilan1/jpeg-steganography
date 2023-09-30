@@ -27,9 +27,8 @@ impl<F: Fn(String)> ProcessSegment for DebugReader<F> {
         } = segment;
         let marker = *marker;
 
-        match marker {
-            RST(_) => return Ok(()),
-            _ => {}
+        if let RST(_) = marker {
+            return Ok(());
         }
 
         log!(

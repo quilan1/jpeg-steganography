@@ -6,7 +6,7 @@ pub fn construct_huffman_table<U: AsRef<[u8]>, V: AsRef<[u8]>>(
     let values = values.as_ref();
 
     let codes = sizes
-        .into_iter()
+        .iter()
         .enumerate()
         .filter_map(|(size, &count)| match count {
             0 => None,
@@ -16,7 +16,7 @@ pub fn construct_huffman_table<U: AsRef<[u8]>, V: AsRef<[u8]>>(
 
     let mut code = 0u16;
     let mut code_table = Vec::new();
-    let mut values = values.into_iter();
+    let mut values = values.iter();
     let mut last = None;
     let mut last_size = 0;
     for (size, count) in codes {
@@ -71,7 +71,7 @@ pub fn print_huffman_table(table: &Vec<(u8, Vec<u8>)>) {
     for (value, bits) in table {
         println!(
             "\t{value}\t{}",
-            bits.into_iter()
+            bits.iter()
                 .map(|v| v.to_string())
                 .collect::<Vec<_>>()
                 .join("")

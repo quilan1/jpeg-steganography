@@ -56,7 +56,7 @@ impl NS0 {
         let digits = self.digits.clone();
         let mut permutation = Vec::new();
         for digit in digits {
-            permutation.push(available.remove(digit as usize));
+            permutation.push(available.remove(digit));
         }
 
         permutation.extend(&available);
@@ -101,6 +101,8 @@ impl NS0 {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::expect_fun_call)]
+
     use super::*;
 
     fn n(v: u32, input: u8) -> Option<NS0> {
@@ -201,11 +203,11 @@ mod tests {
 
     #[test]
     fn test_read_values() {
-        assert_eq!(big(NS0::read_values(&vec![3, 5, 10])), 0);
-        assert_eq!(big(NS0::read_values(&vec![3, 10, 5])), 1);
-        assert_eq!(big(NS0::read_values(&vec![5, 3, 10])), 2);
-        assert_eq!(big(NS0::read_values(&vec![5, 10, 3])), 3);
-        assert_eq!(big(NS0::read_values(&vec![10, 3, 5])), 4);
-        assert_eq!(big(NS0::read_values(&vec![10, 5, 3])), 5);
+        assert_eq!(big(NS0::read_values(&[3, 5, 10])), 0);
+        assert_eq!(big(NS0::read_values(&[3, 10, 5])), 1);
+        assert_eq!(big(NS0::read_values(&[5, 3, 10])), 2);
+        assert_eq!(big(NS0::read_values(&[5, 10, 3])), 3);
+        assert_eq!(big(NS0::read_values(&[10, 3, 5])), 4);
+        assert_eq!(big(NS0::read_values(&[10, 5, 3])), 5);
     }
 }

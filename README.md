@@ -115,6 +115,7 @@ __Huffman Table:__
 | 8 | 111110 |
 | 9 | 1111110 |
 | 10 | 11111110 |
+| 11 | 111111110 |
 
 However, notice that we can change the order of the entries 1 through 5, and not seriously impact the size of the output jpeg file, because they're all the same length! This means, if we permutate the order of the identically-sized segments, we can store a secret number in the ordering. To read out the secret, we merely have to look at the ordering, extract out a number from it, and see if it corresponds to a secret message.
 

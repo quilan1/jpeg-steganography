@@ -19,9 +19,9 @@ impl NS2 {
         }
     }
 
-    pub fn read_values<'a>(input: &Input, values: &Input) -> Self {
+    pub fn read_values(input: &Input, values: &Input) -> Self {
         let mut result = BigUint::zero();
-        for (input, (base, values)) in input.into_iter().zip(
+        for (input, (base, values)) in input.iter().zip(
             super::traits::get_bases(&input.valid())
                 .into_iter()
                 .zip(values),
@@ -35,6 +35,8 @@ impl NS2 {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::expect_fun_call)]
+
     use super::super::traits::InnerDigits;
     use super::*;
 

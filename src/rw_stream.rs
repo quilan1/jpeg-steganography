@@ -69,7 +69,7 @@ impl<'a> RWStream<'a> {
         let value = self.reader.read_huffman(self.dc_tree.unwrap().reader())?;
 
         self.writer
-            .write_huffman(&self.dc_tree.unwrap().writer(), value)?;
+            .write_huffman(self.dc_tree.unwrap().writer(), value)?;
 
         Ok(value)
     }
@@ -78,7 +78,7 @@ impl<'a> RWStream<'a> {
         let value = self.reader.read_huffman(self.ac_tree.unwrap().reader())?;
 
         self.writer
-            .write_huffman(&self.ac_tree.unwrap().writer(), value)?;
+            .write_huffman(self.ac_tree.unwrap().writer(), value)?;
 
         Ok(value)
     }

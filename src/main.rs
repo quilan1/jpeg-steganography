@@ -24,7 +24,7 @@ fn main() -> anyhow::Result<()> {
         let out_path = matches.get_one::<String>("output").unwrap();
         let secret = matches.get_one::<String>("secret").unwrap();
         write_secret_to_file(in_path, out_path, secret)?;
-    } else if let Some(_) = matches.subcommand_matches("read") {
+    } else if matches.subcommand_matches("read").is_some() {
         read_secret_from_file(in_path)?;
     } else {
         debug_file(in_path)?;
@@ -51,7 +51,7 @@ fn write_secret_to_file<P: AsRef<std::path::Path>, S: AsRef<str>>(
 
     let out_data = writer.into_inner();
     let mut out_file = BufWriter::new(File::create(out_file)?);
-    out_file.write(&out_data)?;
+    out_file.write_all(&out_data)?;
 
     println!(
         "Secret uses ~{} / {} bytes of re-arranged Huffman tables",
@@ -85,8 +85,7 @@ fn debug_file<P: AsRef<std::path::Path>>(in_file: P) -> anyhow::Result<()> {
     let mut reader = BufReader::new(File::open(in_file)?);
     let jpeg = jpeg::Jpeg::read_segments(&mut reader)?;
 
-    let mut processor = processors::DebugReader::new(|msg| println!("{}", msg));
-    jpeg.process_segments(&mut processor)?;
+    jpeg.process_segments(processors::DebugReader::new(|msg| println!("{}", msg)))?;
 
     Ok(())
 }

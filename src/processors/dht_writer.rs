@@ -18,8 +18,8 @@ pub struct DhtWriter<W: Write, F> {
 }
 
 impl<W: Write, F> DhtWriter<W, F> {
-    pub fn new(writer: W, callback: F) -> Result<Self> {
-        Ok(Self { writer, callback })
+    pub fn new(writer: W, callback: F) -> Self {
+        Self { writer, callback }
     }
 }
 
@@ -52,7 +52,7 @@ impl<W: Write, F: Fn(&mut HuffmanTableData)> ProcessSegmentMut for DhtWriter<W, 
                 if jpeg.scan.spectral_start != 0 || jpeg.scan.spectral_end != 64 {
                     bail!("Progressive JPEG files not supported")
                 }
-                jpeg.scan.image_data = process_entropy_stream(&jpeg, &jpeg.scan.image_data)?;
+                jpeg.scan.image_data = process_entropy_stream(jpeg, &jpeg.scan.image_data)?;
                 segment.data = jpeg.scan.to_vec();
             }
 

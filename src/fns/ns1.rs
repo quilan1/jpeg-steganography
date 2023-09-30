@@ -57,6 +57,8 @@ impl NS1 {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::expect_fun_call)]
+
     use super::super::traits::InnerDigits;
     use super::*;
 

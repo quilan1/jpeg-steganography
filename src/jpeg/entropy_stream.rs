@@ -72,7 +72,7 @@ pub fn process_entropy_stream(jpeg: &Jpeg, in_data: &Vec<u8>) -> Result<Vec<u8>>
     Ok(out_data)
 }
 
-fn decode_block<'a>(read_writer: &mut RWStream<'a>, jpeg: &Jpeg, eob_run: &mut u16) -> Result<()> {
+fn decode_block(read_writer: &mut RWStream<'_>, jpeg: &Jpeg, eob_run: &mut u16) -> Result<()> {
     if jpeg.scan.spectral_start == 0 {
         // Section F.2.2.1
         // Figure F.12
@@ -142,14 +142,12 @@ fn strip_stream_padding(in_data: &Vec<u8>) -> Vec<u8> {
     fixed_data
 }
 
-fn insert_data_padding(data: &mut Vec<u8>, marker_positions: &Vec<usize>) -> Vec<u8> {
+fn insert_data_padding(data: &mut Vec<u8>, marker_positions: &[usize]) -> Vec<u8> {
     let mut out_data = Vec::new();
     for (index, value) in data.drain(..).enumerate() {
         out_data.push(value);
-        if value == 0xFF {
-            if !marker_positions.contains(&index) {
-                out_data.push(0x00);
-            }
+        if value == 0xFF && !marker_positions.contains(&index) {
+            out_data.push(0x00);
         }
     }
     out_data
@@ -178,7 +176,7 @@ fn get_components_info(jpeg: &Jpeg) -> Vec<ComponentInfo> {
     components
 }
 
-fn get_num_samples(components_info: &Vec<ComponentInfo>) -> (Vec<u32>, Vec<u32>) {
+fn get_num_samples(components_info: &[ComponentInfo]) -> (Vec<u32>, Vec<u32>) {
     let horizontal = components_info
         .iter()
         .map(|component_info| component_info.component.h_factor)
@@ -190,7 +188,7 @@ fn get_num_samples(components_info: &Vec<ComponentInfo>) -> (Vec<u32>, Vec<u32>)
     (horizontal, vertical)
 }
 
-fn get_mcu_range(jpeg: &Jpeg, components_info: &Vec<ComponentInfo>) -> (u32, u32) {
+fn get_mcu_range(jpeg: &Jpeg, components_info: &[ComponentInfo]) -> (u32, u32) {
     let h_max = components_info
         .iter()
         .map(|c| c.component.h_factor)

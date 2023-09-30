@@ -25,11 +25,10 @@ pub fn write_secret<R: Read, W: Write, T: AsRef<[u8]>>(
 
     let table_sizes = RefCell::new(Vec::new());
     let table_values = RefCell::new(Vec::new());
-    let read_processor = DhtReader::new(|table: &HuffmanTableData| {
+    jpeg.process_segments(DhtReader::new(|table: &HuffmanTableData| {
         table_sizes.borrow_mut().push(table.sizes.clone());
         table_values.borrow_mut().push(table.values.clone());
-    });
-    jpeg.process_segments(&read_processor)?;
+    }))?;
 
     let table_sizes = table_sizes.into_inner();
     let mut table_values = table_values.into_inner();
@@ -45,13 +44,11 @@ pub fn write_secret<R: Read, W: Write, T: AsRef<[u8]>>(
     ns.permute_values(&mut table_values);
 
     let table_index = RefCell::new(0usize);
-    let mut processor = DhtWriter::new(writer, |table: &mut HuffmanTableData| {
+    jpeg.process_segments_mut(DhtWriter::new(writer, |table: &mut HuffmanTableData| {
         let mut table_index = table_index.borrow_mut();
         table.values = table_values[*table_index].clone();
         *table_index += 1;
-    })?;
-
-    jpeg.process_segments_mut(&mut processor)?;
+    }))?;
 
     let approx_max_size = table_sizes.max_base_value().to_bytes_be().len();
     let secret_size = BigUint::from(ns).to_bytes_be().len();
@@ -75,11 +72,10 @@ pub fn read_secret<R: Read>(reader: &mut R) -> Result<Option<Vec<u8>>> {
 
     let table_sizes = RefCell::new(Vec::new());
     let table_values = RefCell::new(Vec::new());
-    let read_processor = DhtReader::new(|table: &HuffmanTableData| {
+    jpeg.process_segments(DhtReader::new(|table: &HuffmanTableData| {
         table_sizes.borrow_mut().push(table.sizes.clone());
         table_values.borrow_mut().push(table.values.clone());
-    });
-    jpeg.process_segments(&read_processor)?;
+    }))?;
 
     let table_sizes = table_sizes.into_inner();
     let table_values = table_values.into_inner();

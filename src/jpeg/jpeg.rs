@@ -101,7 +101,7 @@ impl Jpeg {
         sections
     }
 
-    pub fn process_segments_mut<P>(&mut self, processor: &mut P) -> Result<()>
+    pub fn process_segments_mut<P>(&mut self, mut processor: P) -> Result<()>
     where
         P: ProcessSegmentMut,
     {
@@ -123,12 +123,12 @@ impl Jpeg {
         Ok(())
     }
 
-    pub fn process_segments<P>(&self, processor: &P) -> Result<()>
+    pub fn process_segments<P>(&self, processor: P) -> Result<()>
     where
         P: ProcessSegment,
     {
         for segment in &self.segments {
-            processor.process_segment(&self, &segment)?;
+            processor.process_segment(self, segment)?;
         }
 
         Ok(())
@@ -137,23 +137,23 @@ impl Jpeg {
     pub fn write_segment<W: Write>(writer: &mut W, section: &Segment) -> Result<()> {
         let Segment { marker, data, .. } = section;
 
-        writer.write(&[0xFF])?;
-        writer.write(&[u8::from(*marker)])?;
+        writer.write_all(&[0xFF])?;
+        writer.write_all(&[u8::from(*marker)])?;
 
         match *marker {
             SOI | EOI => {}
             RST(_) => {
-                writer.write(data)?;
+                writer.write_all(data)?;
             }
             SOS => {
                 let num_components = data[0];
                 let length = 6 + 2 * num_components;
-                writer.write(&(length as u16).to_be_bytes())?;
-                writer.write(data)?;
+                writer.write_all(&(length as u16).to_be_bytes())?;
+                writer.write_all(data)?;
             }
             _ => {
-                writer.write(&(data.len() as u16 + 2).to_be_bytes())?;
-                writer.write(data)?;
+                writer.write_all(&(data.len() as u16 + 2).to_be_bytes())?;
+                writer.write_all(data)?;
             }
         }
 
@@ -177,7 +177,7 @@ impl Jpeg {
         table_index: usize,
         tree: HuffmanRWTree,
     ) {
-        let index = 2 * table_class as usize + table_index;
+        let index = 2 * table_class + table_index;
         self.huffman_trees[index] = tree;
     }
 }

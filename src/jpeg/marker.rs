@@ -1,4 +1,5 @@
 // [SPEC] Table B.1
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Marker {
     SOF0,        // Baseline DCT

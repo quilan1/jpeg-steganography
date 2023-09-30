@@ -1,4 +1,5 @@
 mod entropy_stream;
+#[allow(clippy::module_inception)]
 mod jpeg;
 mod marker;
 pub mod segments;

@@ -49,7 +49,7 @@ impl TryFrom<&[u8]> for SofData {
         let data = &data[6..];
         let mut components = Vec::new();
         for component in 0..num_components as usize {
-            let data = &data[3 * component as usize..];
+            let data = &data[3 * component..];
             components.push(data.try_into()?);
         }
 
@@ -113,10 +113,9 @@ impl ToVec for DqtData {
 impl TryFrom<&[u8]> for DqtData {
     type Error = anyhow::Error;
 
-    fn try_from(data: &[u8]) -> Result<Self, Self::Error> {
+    fn try_from(mut data: &[u8]) -> Result<Self, Self::Error> {
         let mut tables = Vec::new();
 
-        let mut data = &data[..];
         while !data.is_empty() {
             tables.push(QuantizationTable::try_from(data)?);
             data = &data[65..];
@@ -138,7 +137,7 @@ impl ToVec for HuffmanTableData {
     fn to_vec(&self) -> Vec<u8> {
         let mut output = Vec::new();
         output.push(((self.table_class as u8) << 4) | self.table_index as u8);
-        output.extend(self.sizes.iter().map(|v| *v));
+        output.extend(self.sizes.iter().copied());
         output.extend(&self.values);
         output
     }
@@ -186,11 +185,10 @@ impl ToVec for DhtData {
 impl TryFrom<&[u8]> for DhtData {
     type Error = anyhow::Error;
 
-    fn try_from(data: &[u8]) -> Result<Self, Self::Error> {
+    fn try_from(mut data: &[u8]) -> Result<Self, Self::Error> {
         let mut tables = Vec::new();
 
-        let mut data = &data[..];
-        while data.len() > 0 {
+        while !data.is_empty() {
             let table = HuffmanTableData::try_from(data)?;
             data = &data[17 + table.values.len()..];
             tables.push(table);
@@ -209,10 +207,10 @@ pub struct ScanComponentData {
 
 impl ToVec for ScanComponentData {
     fn to_vec(&self) -> Vec<u8> {
-        let mut output = Vec::new();
-        output.push(self.component_id as u8);
-        output.push(((self.dc_table_index as u8) << 4) | self.ac_table_index as u8);
-        output
+        vec![
+            self.component_id as u8,
+            ((self.dc_table_index as u8) << 4) | self.ac_table_index as u8,
+        ]
     }
 }
 
@@ -270,7 +268,7 @@ impl TryFrom<&[u8]> for SosData {
             components.push(ScanComponentData::try_from(&data[2 * component_index..])?);
         }
 
-        let data = &data[2 * num_components as usize..];
+        let data = &data[2 * num_components..];
         let spectral_start = data[0];
         let spectral_end = data[1];
         let a = data[2];

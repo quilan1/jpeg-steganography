@@ -22,7 +22,7 @@ where
         let digits = self.digits();
 
         let rev_bases = bases.into_iter().rev();
-        let rev_digits = digits.into_iter().rev();
+        let rev_digits = digits.iter().rev();
 
         for (digit, base) in rev_digits.zip(rev_bases) {
             results.push((digit.clone(), base));
@@ -157,7 +157,7 @@ pub trait Bases {
 
 impl Bases for usize {
     fn bases<U>(&self) -> Vec<BigUint> {
-        (1..*self).rev().map(|v| super::factorial(v)).collect()
+        (1..*self).rev().map(super::factorial).collect()
     }
 }
 
@@ -271,4 +271,75 @@ where
     }
 
     Some(Parent::from(digits))
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::identity_op)]
+
+    use super::*;
+
+    fn test_max_base_value<T>(value: T, expected: usize)
+    where
+        T: MaxBaseValue,
+    {
+        assert_eq!(value.max_base_value(), BigUint::from(expected));
+    }
+
+    #[test]
+    fn test_mbv_usize() {
+        type T = usize;
+        test_max_base_value::<T>(1, 1);
+        test_max_base_value::<T>(2, 2);
+        test_max_base_value::<T>(3, 6);
+        test_max_base_value::<T>(4, 24);
+    }
+
+    #[test]
+    fn test_mbv_u8() {
+        type T = u8;
+        test_max_base_value::<T>(1, 1);
+        test_max_base_value::<T>(2, 2);
+        test_max_base_value::<T>(3, 6);
+        test_max_base_value::<T>(4, 24);
+    }
+
+    #[test]
+    fn test_mbv_vec_usize() {
+        type T = Vec<usize>;
+        test_max_base_value::<T>(vec![1, 1], 1 * 1);
+        test_max_base_value::<T>(vec![2, 2], 2 * 2);
+        test_max_base_value::<T>(vec![3, 3], 6 * 6);
+        test_max_base_value::<T>(vec![4, 4], 24 * 24);
+        test_max_base_value::<T>(vec![1, 3], 1 * 6);
+        test_max_base_value::<T>(vec![2, 4], 2 * 24);
+        test_max_base_value::<T>(vec![3, 5], 6 * 120);
+        test_max_base_value::<T>(vec![4, 3], 24 * 6);
+    }
+
+    #[test]
+    fn test_mbv_vec_u8() {
+        type T = Vec<u8>;
+        test_max_base_value::<T>(vec![1, 1], 1 * 1);
+        test_max_base_value::<T>(vec![2, 2], 2 * 2);
+        test_max_base_value::<T>(vec![3, 3], 6 * 6);
+        test_max_base_value::<T>(vec![4, 4], 24 * 24);
+        test_max_base_value::<T>(vec![1, 3], 1 * 6);
+        test_max_base_value::<T>(vec![2, 4], 2 * 24);
+        test_max_base_value::<T>(vec![3, 5], 6 * 120);
+        test_max_base_value::<T>(vec![4, 3], 24 * 6);
+        test_max_base_value::<T>(vec![4, 3], 24 * 6);
+    }
+
+    #[test]
+    fn test_mbv_vec_vec_usize() {
+        type T = Vec<Vec<usize>>;
+        test_max_base_value::<T>(vec![vec![2, 3], vec![4, 5]], 2 * 6 * 24 * 120);
+    }
+
+    #[test]
+    fn test_mbv_vec_vec_u8() {
+        type T = Vec<Vec<u8>>;
+        test_max_base_value::<T>(vec![vec![2, 3], vec![4, 5]], 2 * 6 * 24 * 120);
+    }
 }
